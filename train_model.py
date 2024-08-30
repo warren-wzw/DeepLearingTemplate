@@ -8,9 +8,9 @@ os.chdir(sys.path[0])
 from datetime import datetime
 from model.template import TEMPLATE
 from torch.utils.data import DataLoader
-from model.utils import TemplateDataset, load_checkpoint, save_checkpoint
-from model.utils import load_and_cache_withlabel,get_linear_schedule_with_warmup,PrintModelInfo,CaculateAcc,
-load_checkpoint,save_checkpoint
+from model.utils import TemplateDataset
+from model.utils import load_and_cache_withlabel,get_linear_schedule_with_warmup,\
+    PrintModelInfo,CaculateAcc, load_checkpoint, save_checkpoint
 
 try:
     from torch.utils.tensorboard import SummaryWriter
