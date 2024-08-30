@@ -1,14 +1,26 @@
 import os
 import sys
 import torch
-import numpy as np
-import random
 import tqdm
+import shutil
+import random
+import numpy as np
 import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
 from torch.utils.data import  Dataset
 from torch.optim.lr_scheduler import LambdaLR
 
+"""Model info"""
+def PrintModelInfo(model):
+    """Print the parameter size and shape of model detail"""
+    total_params = 0
+    for name, param in model.named_parameters():
+        num_params = torch.prod(torch.tensor(param.shape)).item() * param.element_size() / (1024 * 1024)  # 转换为MB
+        print(f"{name}: {num_params:.4f} MB, Shape: {param.shape}")
+        total_params += num_params
+    print(f"Total number of parameters: {total_params:.4f} MB")     
+
+"""Lr"""
 def get_linear_schedule_with_warmup(optimizer, num_warmup_steps, num_training_steps, last_epoch=-1):
     def lr_lambda(current_step):
         if current_step < num_warmup_steps:
@@ -19,15 +31,7 @@ def get_linear_schedule_with_warmup(optimizer, num_warmup_steps, num_training_st
 
     return LambdaLR(optimizer, lr_lambda, last_epoch=last_epoch)
 
-def PrintModelInfo(model):
-    """Print the parameter size and shape of model detail"""
-    total_params = 0
-    for name, param in model.named_parameters():
-        num_params = torch.prod(torch.tensor(param.shape)).item() * param.element_size() / (1024 * 1024)  # 转换为MB
-        print(f"{name}: {num_params:.4f} MB, Shape: {param.shape}")
-        total_params += num_params
-    print(f"Total number of parameters: {total_params:.4f} MB")     
-
+"""Dataset"""   
 def min_max_normalize(image):
     np_image = np.array(image).astype(np.float32)
     np_image = (np_image - np.min(np_image)) / (np.max(np_image) - np.min(np_image))
@@ -53,9 +57,6 @@ def preprocess_image(image):
     image=transform(image)
     #visual_result(image,"out.jpg")
     return image
-
-def CaculateAcc():
-    print()
     
 def load_and_cache_withlabel(data_path,cache_file,shuffle=False):
     if cache_file is not None and os.path.exists(cache_file):
@@ -104,4 +105,45 @@ class TemplateDataset(Dataset):
         image=feature["images"]
         label=feature["label"]
         return image,label
-    
+
+"""Save and load model"""
+def save_checkpoint(obj, save_path, is_best=False, max_keep=None):
+    # save checkpoint
+    torch.save(obj, save_path)
+
+    # deal with max_keep
+    save_dir = os.path.dirname(save_path)
+    list_path = os.path.join(save_dir, 'latest_checkpoint')
+
+    save_path = os.path.basename(save_path)
+    if os.path.exists(list_path):
+        with open(list_path) as f:
+            ckpt_list = f.readlines()
+            ckpt_list = [save_path + '\n'] + ckpt_list
+    else:
+        ckpt_list = [save_path + '\n']
+
+    with open(list_path, 'w') as f:
+        f.writelines(ckpt_list)
+
+    # copy best
+    if is_best:
+        shutil.copyfile(save_path, os.path.join(save_dir, 'best_model.ckpt'))
+
+def load_checkpoint(ckpt_dir_or_file, map_location=None, load_best=False):
+    if os.path.isdir(ckpt_dir_or_file):
+        if load_best:
+            ckpt_path = os.path.join(ckpt_dir_or_file, 'best_model.ckpt')
+        else:
+            with open(os.path.join(ckpt_dir_or_file, 'latest_checkpoint')) as f:
+                ckpt_path = os.path.join(ckpt_dir_or_file, f.readline()[:-1])
+    else:
+        ckpt_path = ckpt_dir_or_file
+    ckpt = torch.load(ckpt_path, map_location=map_location)
+    print(' [*] Loading checkpoint succeeds! Copy variables from % s!' % ckpt_path)
+    return ckpt
+
+"""Evaluate model"""
+def CaculateAcc(output,label):
+    print()
+   

@@ -1,8 +1,2 @@
-# dataset/test/*
-# dataset/train/*
-# dataset/val/*
-# dataset/cache/*
-# dataset/label/*
-# output/output_images/*
-# output/output_model/*
-# output/tflog/*
+dataset/*
+output/*
