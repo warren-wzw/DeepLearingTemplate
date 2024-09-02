@@ -62,6 +62,7 @@ def main():
     """tensorboard"""
     tb_writer = SummaryWriter(log_dir='./output/tflog/') 
     """Pretrain"""
+    start_ep=0
     if PRETRAINED:
         ckpt = load_checkpoint(PRETRAINED_MODEL_PATH)
         start_ep = ckpt['epoch']
