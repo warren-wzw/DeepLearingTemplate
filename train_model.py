@@ -1,10 +1,11 @@
 import os
 import sys
+os.chdir(sys.path[0])
+os.environ["CUDA_VISIBLE_DEVICES"]='0'
 import torch
 import tqdm 
 import torch.nn as nn
 
-os.chdir(sys.path[0])
 from datetime import datetime
 from model.template import TEMPLATE
 from torch.utils.data import DataLoader
