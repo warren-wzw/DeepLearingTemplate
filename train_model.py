@@ -22,7 +22,7 @@ EPOCH=200
 BATCH_SIZE=100
 TENSORBOARDSTEP=500
 PRETRAINED_MODEL_PATH=" "
-PRETRAINED=False if PRETRAINED_MODEL_PATH != "" and os.path.exists(PRETRAINED_MODEL_PATH) else True
+PRETRAINED=True if PRETRAINED_MODEL_PATH != "" and os.path.exists(PRETRAINED_MODEL_PATH) else False
 SAVE_PATH='./output/output_model/'
 MODEL_NAME=""
 DEVICE=torch.device("cuda" if torch.cuda.is_available() else "cpu")
