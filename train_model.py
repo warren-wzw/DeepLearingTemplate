@@ -11,8 +11,7 @@ from model.template import TEMPLATE
 from torch.utils.data import DataLoader
 from model.utils import TemplateDataset
 from model.utils import load_and_cache_withlabel,get_linear_schedule_with_warmup,\
-    PrintModelInfo,CaculateAcc, load_checkpoint, save_checkpoint
-
+    PrintModelInfo,CaculateAcc
 try:
     from torch.utils.tensorboard import SummaryWriter
 except:
@@ -65,7 +64,7 @@ def main():
     """Pretrain"""
     start_ep=0
     if PRETRAINED:
-        ckpt = load_checkpoint(PRETRAINED_MODEL_PATH)
+        ckpt = torch.load(PRETRAINED_MODEL_PATH)
         start_ep = ckpt['epoch']
         model.load_state_dict(ckpt['model'])
         optimizer.load_state_dict(ckpt['optimizer'])
@@ -124,12 +123,11 @@ def main():
             best_accuarcy = sum_accuarcy/(i+1)
             if not os.path.exists(SAVE_PATH):
                 os.makedirs(SAVE_PATH)
-            save_checkpoint({'epoch': epoch_index + 1,
+            torch.save({'epoch': epoch_index + 1,
                                 'model': model.state_dict(),
                                 'optimizer': optimizer.state_dict(),
                                 'scheduler':scheduler.state_dict()},
-                                '%s%s.ckpt' % (SAVE_PATH,MODEL_NAME),
-                                max_keep=2) 
+                                '%s%s' % (SAVE_PATH,MODEL_NAME))
             print("->Saving model {} at {}".format(SAVE_PATH+MODEL_NAME, 
                         datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
     end_time=datetime.now()

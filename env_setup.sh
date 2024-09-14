@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #setup env
-ENV_NAME='XXXX'
-conda create --name $ENV_NAME python==3.8.0
+# ENV_NAME='XXXX'
+# conda create --name $ENV_NAME python==3.8.0
 #source /home/warren/anaconda3/bin/activate  /home/warren/anaconda3/envs/$ENV_NAME
 #pip install -r requirment.txt
 

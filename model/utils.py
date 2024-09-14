@@ -14,11 +14,12 @@ from torch.optim.lr_scheduler import LambdaLR
 def PrintModelInfo(model):
     """Print the parameter size and shape of model detail"""
     total_params = 0
+    model_parments = sum(p.numel() for p in model.parameters() if p.requires_grad)
     for name, param in model.named_parameters():
         num_params = torch.prod(torch.tensor(param.shape)).item() * param.element_size() / (1024 * 1024)  # 转换为MB
         print(f"{name}: {num_params:.4f} MB, Shape: {param.shape}")
         total_params += num_params
-    print(f"Total number of parameters: {total_params:.4f} MB")     
+    print(f"Traing parments {model_parments/1e6}M,Model Size: {total_params:.4f} MB")     
 
 """Lr"""
 def get_linear_schedule_with_warmup(optimizer, num_warmup_steps, num_training_steps, last_epoch=-1):
@@ -107,41 +108,6 @@ class TemplateDataset(Dataset):
         return image,label
 
 """Save and load model"""
-def save_checkpoint(obj, save_path, is_best=False, max_keep=None):
-    # save checkpoint
-    torch.save(obj, save_path)
-
-    # deal with max_keep
-    save_dir = os.path.dirname(save_path)
-    list_path = os.path.join(save_dir, 'latest_checkpoint')
-
-    save_path = os.path.basename(save_path)
-    if os.path.exists(list_path):
-        with open(list_path) as f:
-            ckpt_list = f.readlines()
-            ckpt_list = [save_path + '\n'] + ckpt_list
-    else:
-        ckpt_list = [save_path + '\n']
-
-    with open(list_path, 'w') as f:
-        f.writelines(ckpt_list)
-
-    # copy best
-    if is_best:
-        shutil.copyfile(save_path, os.path.join(save_dir, 'best_model.ckpt'))
-
-def load_checkpoint(ckpt_dir_or_file, map_location=None, load_best=False):
-    if os.path.isdir(ckpt_dir_or_file):
-        if load_best:
-            ckpt_path = os.path.join(ckpt_dir_or_file, 'best_model.ckpt')
-        else:
-            with open(os.path.join(ckpt_dir_or_file, 'latest_checkpoint')) as f:
-                ckpt_path = os.path.join(ckpt_dir_or_file, f.readline()[:-1])
-    else:
-        ckpt_path = ckpt_dir_or_file
-    ckpt = torch.load(ckpt_path, map_location=map_location)
-    print(' [*] Loading checkpoint succeeds! Copy variables from % s!' % ckpt_path)
-    return ckpt
 
 """Evaluate model"""
 def CaculateAcc(output,label):
