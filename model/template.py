@@ -52,9 +52,9 @@ class SelfAttentionBlock(nn.Module):
         out =  self.gamma+h + x #resnet
         return out
        
-class TransformerBottleneck(nn.Module):
+class TransformerEncoder(nn.Module):
     def __init__(self, in_channels, num_heads=8, dim_feedforward=1024, num_layers=3):
-        super(TransformerBottleneck, self).__init__()
+        super(TransformerEncoder, self).__init__()
         
         # Patch embedding: Flatten spatial dimensions and map to reduced feature dimension
         self.patch_embed = nn.Conv2d(in_channels, in_channels // 2, kernel_size=1)
