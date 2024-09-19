@@ -1,157 +1,118 @@
 import os
-from pipes import Template
 import sys
-os.chdir(sys.path[0])
-os.environ["CUDA_VISIBLE_DEVICES"]='0,1'
 import torch
 import tqdm 
-import numpy as np
-import torch.multiprocessing as mp
-torch.multiprocessing.set_sharing_strategy('file_system')
-
-from datetime import datetime
-from PIL import Image
+import torch.nn as nn
+os.chdir(sys.path[0])
 from model.template import TEMPLATE
-from torchvision.utils import make_grid
-from torch.utils.data import DataLoader
-from model.utils import TemplateDataset
-from model.utils import load_and_cache_withlabel,get_linear_schedule_with_warmup,\
-    PrintModelInfo,CaculateAcc,save_ckpt
+from torch.utils.data import (DataLoader)
+from datetime import datetime
+from model.utils import TemplateDataset,load_and_cache_withlabel,get_linear_schedule_with_warmup,PrintModelInfo,CaculateAcc
 try:
     from torch.utils.tensorboard import SummaryWriter
 except:
     from tensorboardX import SummaryWriter
-
-LR=5e-4   
-
-EPOCH=200 
-NUM_CLASS=10
-BATCH_SIZE=128
-DEVICE_VAL = 1
-DEVICE_TRAIN = 0
+    
+BATCH_SIZE=100
+EPOCH=200
+LR=1e-5
 TENSORBOARDSTEP=500
-MODEL_NAME=f"model.ckpt"
-LAST_MODEL_NAME=f"model_last.ckpt"
-SAVE_PATH='./output/output_model/'
-PRETRAINED_MODEL_PATH=SAVE_PATH+LAST_MODEL_NAME
-PRETRAINED=True if PRETRAINED_MODEL_PATH != "" and os.path.exists(PRETRAINED_MODEL_PATH) else False
+SAVE_MODEL='./output/output_model/'
+PRETRAINED_MODEL_PATH=" "
+Pretrain=False if PRETRAINED_MODEL_PATH ==" " else True
 DEVICE=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+TF_ENABLE_ONEDNN_OPTS=0
 """dataset"""
 train_type="train"
-data_path_train=f"./dataset/src/{train_type}"
-label_path=f"./dataset/label/{train_type}/{train_type}.json"
+data_path_train=f"./dataset/train/train"
 cached_file=f"./dataset/cache/{train_type}.pt"
 val_type="val"
-data_path_val=f"./dataset/test/{val_type}"
+data_path_val=f"./dataset/test/test"
 cached_file_val=f"./dataset/cache/{val_type}.pt"
-step=0
-    
-def CreateDataloader(data_path,label_path,cached_file):
-    features = load_and_cache_withlabel(data_path,label_path,cached_file,shuffle=False)  
+def CreateDataloader(image_path,cached_file):
+    features = load_and_cache_withlabel(image_path,cached_file,shuffle=True)  
     num_features = len(features)
-    num_features = int(num_features)
-    train_features = features[:num_features]
-    dataset = TemplateDataset(features=train_features,num_instances=num_features)
+    num_train = int(1* num_features)
+    train_features = features[:num_train]
+    dataset = TemplateDataset(features=train_features,num_instances=num_train)
     loader = DataLoader(dataset=dataset, batch_size=BATCH_SIZE, shuffle=True)
     return loader
-
-def train_process(model,event,shared_dict):
-    model.train()
+def main():
     global_step=0
-    best_loss=100000 
-    shared_dict['index'] = 0  # 共享变量初始化
+    """Define Model"""
+    model=TEMPLATE()
+    model.to(DEVICE)
+    PrintModelInfo(model)
+    """Pretrain"""
+    if Pretrain:
+        model.load_state_dict(torch.load(PRETRAINED_MODEL_PATH),strict=False)
     """Create dataloader"""
     dataloader_train=CreateDataloader(data_path_train,cached_file)
+    dataloader_val=CreateDataloader(data_path_val,cached_file_val)
     total_steps = len(dataloader_train) * EPOCH
     """Loss function"""
-    
+    criterion = nn.CrossEntropyLoss()
     """Optimizer"""
     optimizer = torch.optim.AdamW(model.parameters(), lr=LR)
-    """Lr"""
+    """ Train! """
+    best_accuarcy=0 
+    model.train()
+    torch.cuda.empty_cache()
     scheduler = get_linear_schedule_with_warmup(optimizer, 0.1 * total_steps , total_steps)
-    """tensorboard"""
     tb_writer = SummaryWriter(log_dir='./output/tflog/') 
-    """Pretrain"""
-    start_ep=0
-    if PRETRAINED:
-        ckpt = torch.load(PRETRAINED_MODEL_PATH,weights_only=True)
-        start_ep = ckpt['epoch']
-        model.load_state_dict(ckpt['model'])
-        # optimizer.load_state_dict(ckpt['optimizer'])
-        # scheduler.load_state_dict(ckpt['scheduler'])  
-    torch.cuda.set_device(DEVICE_TRAIN)
     print("  ************************ Running training ***********************")
     print("  Num Epochs = ", EPOCH)
     print("  Batch size per node = ", BATCH_SIZE)
     print("  Num examples = ", dataloader_train.sampler.data_source.num_instances)
-    print(f"  Pretrained Model is {PRETRAINED_MODEL_PATH}")
-    print(f"  Save Model as {SAVE_PATH+MODEL_NAME}")
+    print(f"  Pretrained Model is ")
+    print(f"  Save Model as {SAVE_MODEL}")
     print("  ****************************************************************")
-    for epoch_index in range(start_ep,EPOCH):
+    start_time=datetime.now()
+    for epoch_index in range(EPOCH):
         loss_sum=0
         sum_test_accuarcy=0
-        shared_dict['index']=epoch_index
         train_iterator = tqdm.tqdm(dataloader_train, initial=0,desc="Iter", disable=False)
         for step, (image,label) in enumerate(train_iterator):
             image,label= image.to(DEVICE),label.to(DEVICE)
             optimizer.zero_grad()
-            loss =model.forward(image,label)
+            output=model(image)
+            accuarcy=CaculateAcc()
+            loss = criterion(output, label)
             loss.backward()
             optimizer.step()
-            """cal loss and acc"""
+            model.zero_grad()
             loss_sum=loss_sum+loss.item()
-            """ tensorbooard """
+            sum_test_accuarcy=sum_test_accuarcy+accuarcy
             current_lr= scheduler.get_last_lr()[0]
+            """ tensorbooard """
             if  global_step % TENSORBOARDSTEP== 0 and tb_writer is not None:
                 tb_writer.add_scalar('train/lr', current_lr, global_step=global_step)
                 tb_writer.add_scalar('train/loss', loss.item(), global_step=global_step)
-            """show progress bar"""
-            train_iterator.set_description('Epoch=%d, Acc= %3.3f %%,loss=%.6f, lr=%9.7f' 
-                                           % (epoch_index,(sum_test_accuarcy/(step+1))*100, loss_sum/(step+1), current_lr))
             global_step=global_step+1
             scheduler.step()
-        """save the best"""
-        if loss_sum/(step+1) < best_loss:
-            best_loss = loss_sum/(step+1)
-            save_ckpt(SAVE_PATH,MODEL_NAME,model,epoch_index,scheduler,optimizer)
-        else:
-            save_ckpt(SAVE_PATH,LAST_MODEL_NAME,model,epoch_index,scheduler,optimizer)    
-        torch.cuda.empty_cache()
-        event.set()  
-        event.clear()  
-
-def val_process(model,event,shared_dict):
-    torch.cuda.set_device(DEVICE_VAL)
-    model.to(DEVICE_VAL)  # 确保模型位于正确的设备上
-    model.eval()
-    while True:
-        event.wait()
-        epoch_index = shared_dict['index']
+            train_iterator.set_description('Epoch=%d, Acc= %3.3f %%,loss=%.6f, lr=%9.7f' 
+                                           % (epoch_index,(sum_test_accuarcy/(step+1))*100, loss_sum/(step+1), current_lr))
+        """ validation """
+        sum_accuarcy=0
+        model.eval()
         with torch.no_grad():
-            model()
-            event.clear()
-                             
-def main():
-    """Define Model"""
-    model=Template().to(DEVICE)
-    #PrintModelInfo(model)
-    """create share dict and event"""
-    manager = mp.Manager()
-    shared_dict = manager.dict()  
-    event = mp.Event()
-    """ Train! """
-    start_time=datetime.now()
-    p_train = mp.Process(target=train_process, args=(model,event,shared_dict))
-    p_val = mp.Process(target=val_process, args=(model, event,shared_dict))
-    """multi process"""
-    p_train.start()
-    p_val.start()
-    p_train.join()
-    p_val.join()
+            validation_iterator = tqdm.tqdm(dataloader_val, initial=0,desc="Iter", disable=False)
+            for i,  (image,label) in enumerate(validation_iterator):
+                image,label= image.to(DEVICE),label.to(DEVICE) 
+                output=model(image)
+                accuarcy=CaculateAcc()
+                sum_accuarcy=sum_accuarcy+ accuarcy
+                validation_iterator.set_description('ValAcc= %3.3f %%' % (sum_accuarcy*100/(i+1)))
+        
+        if sum_accuarcy/(i+1) > best_accuarcy:
+            best_accuarcy = sum_accuarcy/(i+1)
+            if not os.path.exists(SAVE_MODEL):
+                os.makedirs(SAVE_MODEL)
+            torch.save(model.state_dict(), os.path.join(SAVE_MODEL,f"Template.pth"))
+            print("->Saving model {} at {}".format(SAVE_MODEL+f"Template.pth", 
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
     end_time=datetime.now()
     print("Training consume :",(end_time-start_time)/60,"minutes")
     
 if __name__=="__main__":
-    mp.set_start_method('spawn')
     main()
