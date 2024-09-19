@@ -7,21 +7,25 @@ os.chdir(sys.path[0])
 from model.template import TEMPLATE
 from torch.utils.data import (DataLoader)
 from datetime import datetime
-from model.utils import TemplateDataset,load_and_cache_withlabel,get_linear_schedule_with_warmup,PrintModelInfo,CaculateAcc
+from model.utils import TemplateDataset,load_and_cache_withlabel,get_linear_schedule_with_warmup,\
+    PrintModelInfo,CaculateAcc,save_ckpt
 try:
     from torch.utils.tensorboard import SummaryWriter
 except:
     from tensorboardX import SummaryWriter
     
-BATCH_SIZE=100
-EPOCH=200
 LR=1e-5
+EPOCH=200
+BATCH_SIZE=100
 TENSORBOARDSTEP=500
-SAVE_MODEL='./output/output_model/'
-PRETRAINED_MODEL_PATH=" "
+TF_ENABLE_ONEDNN_OPTS=0
+MODEL_NAME=f"model.ckpt"
+LAST_MODEL_NAME=f"model_last.ckpt"
+SAVE_PATH='./output/output_model/'
+PRETRAINED_MODEL_PATH=SAVE_PATH+LAST_MODEL_NAME
 Pretrain=False if PRETRAINED_MODEL_PATH ==" " else True
 DEVICE=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-TF_ENABLE_ONEDNN_OPTS=0
+
 """dataset"""
 train_type="train"
 data_path_train=f"./dataset/train/train"
@@ -29,6 +33,7 @@ cached_file=f"./dataset/cache/{train_type}.pt"
 val_type="val"
 data_path_val=f"./dataset/test/test"
 cached_file_val=f"./dataset/cache/{val_type}.pt"
+
 def CreateDataloader(image_path,cached_file):
     features = load_and_cache_withlabel(image_path,cached_file,shuffle=True)  
     num_features = len(features)
@@ -37,6 +42,7 @@ def CreateDataloader(image_path,cached_file):
     dataset = TemplateDataset(features=train_features,num_instances=num_train)
     loader = DataLoader(dataset=dataset, batch_size=BATCH_SIZE, shuffle=True)
     return loader
+
 def main():
     global_step=0
     """Define Model"""
@@ -65,7 +71,7 @@ def main():
     print("  Batch size per node = ", BATCH_SIZE)
     print("  Num examples = ", dataloader_train.sampler.data_source.num_instances)
     print(f"  Pretrained Model is ")
-    print(f"  Save Model as {SAVE_MODEL}")
+    print(f"  Save Model as {SAVE_PATH}")
     print("  ****************************************************************")
     start_time=datetime.now()
     for epoch_index in range(EPOCH):
@@ -103,14 +109,12 @@ def main():
                 accuarcy=CaculateAcc()
                 sum_accuarcy=sum_accuarcy+ accuarcy
                 validation_iterator.set_description('ValAcc= %3.3f %%' % (sum_accuarcy*100/(i+1)))
-        
-        if sum_accuarcy/(i+1) > best_accuarcy:
-            best_accuarcy = sum_accuarcy/(i+1)
-            if not os.path.exists(SAVE_MODEL):
-                os.makedirs(SAVE_MODEL)
-            torch.save(model.state_dict(), os.path.join(SAVE_MODEL,f"Template.pth"))
-            print("->Saving model {} at {}".format(SAVE_MODEL+f"Template.pth", 
-                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+        """save model"""
+        if loss_sum/(step+1) < best_loss:
+            best_loss = loss_sum/(step+1)
+            save_ckpt(SAVE_PATH,MODEL_NAME,model,epoch_index,scheduler,optimizer)
+        else:
+            save_ckpt(SAVE_PATH,LAST_MODEL_NAME,model,epoch_index,scheduler,optimizer) 
     end_time=datetime.now()
     print("Training consume :",(end_time-start_time)/60,"minutes")
     

@@ -1,5 +1,4 @@
 import os
-from pipes import Template
 import sys
 os.chdir(sys.path[0])
 os.environ["CUDA_VISIBLE_DEVICES"]='0,1'
@@ -10,13 +9,13 @@ import torch.multiprocessing as mp
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 from datetime import datetime
-from PIL import Image
 from model.template import TEMPLATE
-from torchvision.utils import make_grid
 from torch.utils.data import DataLoader
 from model.utils import TemplateDataset
 from model.utils import load_and_cache_withlabel,get_linear_schedule_with_warmup,\
-    PrintModelInfo,CaculateAcc,save_ckpt
+                                            PrintModelInfo,save_ckpt
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 try:
     from torch.utils.tensorboard import SummaryWriter
 except:
@@ -71,7 +70,7 @@ def train_process(model,event,shared_dict):
     """Lr"""
     scheduler = get_linear_schedule_with_warmup(optimizer, 0.1 * total_steps , total_steps)
     """tensorboard"""
-    #tb_writer = SummaryWriter(log_dir='./output/tflog/') 
+    tb_writer = SummaryWriter(log_dir='./output/tflog/') 
     """Pretrain"""
     start_ep=0
     if PRETRAINED:
@@ -102,10 +101,10 @@ def train_process(model,event,shared_dict):
             """cal loss and acc"""
             loss_sum=loss_sum+loss.item()
             """ tensorbooard """
-            # current_lr= scheduler.get_last_lr()[0]
-            # if  global_step % TENSORBOARDSTEP== 0 and tb_writer is not None:
-            #     tb_writer.add_scalar('train/lr', current_lr, global_step=global_step)
-            #     tb_writer.add_scalar('train/loss', loss.item(), global_step=global_step)
+            current_lr= scheduler.get_last_lr()[0]
+            if  global_step % TENSORBOARDSTEP== 0 and tb_writer is not None:
+                tb_writer.add_scalar('train/lr', current_lr, global_step=global_step)
+                tb_writer.add_scalar('train/loss', loss.item(), global_step=global_step)
             """show progress bar"""
             train_iterator.set_description('Epoch=%d, Acc= %3.3f %%,loss=%.6f, lr=%9.7f' 
                                            % (epoch_index,(sum_test_accuarcy/(step+1))*100, loss_sum/(step+1), current_lr))
