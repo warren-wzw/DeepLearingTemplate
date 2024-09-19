@@ -59,7 +59,7 @@ def preprocess_image(image):
     #visual_result(image,"out.jpg")
     return image
     
-def load_and_cache_withlabel(data_path,cache_file,shuffle=False):
+def load_and_cache_withlabel(data_path,label_path,cache_file,shuffle=False):
     if cache_file is not None and os.path.exists(cache_file):
         print("Loading features from cached file ", cache_file)
         features = torch.load(cache_file)
@@ -108,7 +108,18 @@ class TemplateDataset(Dataset):
         return image,label
 
 """Save and load model"""
-
+from datetime import datetime
+def save_ckpt(save_path,model_name,model,epoch_index,scheduler,optimizer):
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+    torch.save({'epoch': epoch_index + 1,
+                        'model': model.state_dict(),
+                        'optimizer': optimizer.state_dict(),
+                        'scheduler':scheduler.state_dict()},
+                        '%s%s' % (save_path,model_name))
+    print("->Saving model {} at {}".format(save_path+model_name, 
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    
 """Evaluate model"""
 def CaculateAcc(output,label):
     print()
