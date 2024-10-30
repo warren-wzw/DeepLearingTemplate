@@ -119,7 +119,14 @@ def save_ckpt(save_path,model_name,model,epoch_index,scheduler,optimizer):
                         '%s%s' % (save_path,model_name))
     print("->Saving model {} at {}".format(save_path+model_name, 
                 datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-    
+"""Device"""
+def get_gpus(num=None):
+    gpu_nums = torch.cuda.device_count()
+    if isinstance(num, list):
+        devices = [torch.device(f'cuda:{i}')for i in num if i < gpu_nums]
+    else:
+        devices = [torch.device(f'cuda:{i}')for i in range(gpu_nums)][:num]
+    return devices if devices else [torch.device('cpu')]   
 """Evaluate model"""
 def CaculateAcc(output,label):
     print()

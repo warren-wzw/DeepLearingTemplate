@@ -133,7 +133,7 @@ def val_process(model,event,shared_dict):
                              
 def main():
     """Define Model"""
-    model=Template().to(DEVICE)
+    model=TEMPLATE().to(DEVICE)
     #PrintModelInfo(model)
     """create share dict and event"""
     manager = mp.Manager()

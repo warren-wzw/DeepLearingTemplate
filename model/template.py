@@ -5,7 +5,7 @@ import torch.nn.init as init
 
 """DSC Usage: DepthwiseSeparableConv(in_channels, out_channels, 3, 1, 1)"""
 class DepthwiseSeparableConv(nn.Module):
-    def __init__(self, in_channels, output_channels, kernel_size, stride=1,padding=0, kernels_per_layer=1):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1,padding=0, kernels_per_layer=1):
         super().__init__()
         self.depthwise = nn.Conv2d(
             in_channels,
@@ -15,7 +15,7 @@ class DepthwiseSeparableConv(nn.Module):
             padding=padding,
             groups=in_channels,
         )
-        self.pointwise = nn.Conv2d(in_channels * kernels_per_layer, output_channels, kernel_size=1)
+        self.pointwise = nn.Conv2d(in_channels * kernels_per_layer, out_channels, kernel_size=1)
 
     def forward(self, x):
         x = self.depthwise(x)
@@ -86,7 +86,7 @@ class TransformerEncoder(nn.Module):
         x = self.unpatch_embed(x)
         
         return x
-"""CBAM Usage:"""
+"""CBAM Usage:CBAM(planes=input_channelnum)"""
 class ChannelAttention(nn.Module):
     def __init__(self, in_planes, ratio=16):
         super(ChannelAttention, self).__init__()
