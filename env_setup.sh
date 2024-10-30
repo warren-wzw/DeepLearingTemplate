@@ -52,3 +52,4 @@ create_directory "$DIR_PATH_LABEL"
 create_directory "$DIR_PATH_LABEL_TEST"
 create_directory "$DIR_PATH_LABEL_TRAIN"
 create_directory "$DIR_PATH_LABEL_VAL"
+rm -rf .git/
