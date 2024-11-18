@@ -8,7 +8,7 @@ os.environ["CUDA_VISIBLE_DEVICES"]='0'
 from model.template import TEMPLATE
 from torch.utils.data import (DataLoader)
 from datetime import datetime
-from model.utils import TemplateDataset,load_and_cache_withlabel,get_linear_schedule_with_warmup,\
+from model.utils import CacheDataset,OnlineCacheDataset,PreprocessCacheData,get_linear_schedule_with_warmup,\
     PrintModelInfo,CaculateAcc,save_ckpt
 try:
     from torch.utils.tensorboard import SummaryWriter
@@ -18,6 +18,7 @@ except:
 LR=1e-5
 EPOCH=200
 BATCH_SIZE=100
+CACHE=False
 TENSORBOARDSTEP=500
 TF_ENABLE_ONEDNN_OPTS=0
 MODEL_NAME=f"model.ckpt"
@@ -35,13 +36,17 @@ val_type="val"
 data_path_val=f"./dataset/test/test"
 cached_file_val=f"./dataset/cache/{val_type}.pt"
 
-def CreateDataloader(image_path,cached_file):
-    features = load_and_cache_withlabel(image_path,cached_file,shuffle=True)  
-    num_features = len(features)
-    num_train = int(1* num_features)
-    train_features = features[:num_train]
-    dataset = TemplateDataset(features=train_features,num_instances=num_train)
-    loader = DataLoader(dataset=dataset, batch_size=BATCH_SIZE, shuffle=True)
+def CreateDataloader(image_path,label_path,cached_file):
+    if CACHE:
+        features = PreprocessCacheData(image_path,label_path,cached_file,cache=CACHE,shuffle=True)  
+        num_features = len(features)
+        num_train = int(1* num_features)
+        train_features = features[:num_train]
+        dataset = CacheDataset(features=train_features,num_instances=num_train)
+        loader = DataLoader(dataset=dataset, batch_size=BATCH_SIZE, shuffle=True)
+    else:
+        dataset = OnlineCacheDataset(image_path,label_path,shuffle=True)
+        loader = DataLoader(dataset=dataset, batch_size=BATCH_SIZE, shuffle=True)
     return loader
 
 def main():

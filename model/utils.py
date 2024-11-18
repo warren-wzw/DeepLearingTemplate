@@ -1,12 +1,14 @@
 import os
-import sys
 import torch
 import tqdm
-import shutil
+import json
+import math
 import random
 import numpy as np
 import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
+
+from PIL import Image
 from torch.utils.data import  Dataset
 from torch.optim.lr_scheduler import LambdaLR
 
@@ -31,6 +33,11 @@ def get_linear_schedule_with_warmup(optimizer, num_warmup_steps, num_training_st
         )
 
     return LambdaLR(optimizer, lr_lambda, last_epoch=last_epoch)
+
+def ConsineAnnealing(optimizer,epochs,lrf=0.0001):
+    lf = lambda x: ((1 + math.cos(x * math.pi / epochs)) / 2) * (1 - lrf) + lrf  # cosine
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
+    return scheduler
 
 """Dataset"""   
 def min_max_normalize(image):
@@ -59,8 +66,8 @@ def preprocess_image(image):
     #visual_result(image,"out.jpg")
     return image
     
-def load_and_cache_withlabel(data_path,label_path,cache_file,shuffle=False):
-    if cache_file is not None and os.path.exists(cache_file):
+def PreprocessCacheData(data_path,label_path,cache_file,cache=False,shuffle=True):
+    if cache ==True and cache_file is not None and os.path.exists(cache_file):
         print("Loading features from cached file ", cache_file)
         features = torch.load(cache_file)
     else:
@@ -88,12 +95,12 @@ def load_and_cache_withlabel(data_path,label_path,cache_file,shuffle=False):
  
         if shuffle:
             random.shuffle(features)
-        if not os.path.exists(cache_file):
+        if cache==True and not os.path.exists(cache_file):
             print("Saving features into cached file ", cache_file)
             torch.save(features, cache_file)
     return features
 
-class TemplateDataset(Dataset):
+class CacheDataset(Dataset):
     def __init__(self,features,num_instances):
         self.feature=features
         self.num_instances=num_instances
@@ -105,6 +112,35 @@ class TemplateDataset(Dataset):
         feature = self.feature[index]
         image=feature["images"]
         label=feature["label"]
+        return image,label
+    
+class OnlineCacheDataset(Dataset):
+    def __init__(self,image_path,label_path,shuffle=False):
+        labels=[]
+        self.img_paths = sorted([os.path.join(image_path, file) for file in os.listdir(image_path) if file.lower().endswith('.jpg')])
+        with open(label_path,'r') as json_file:
+             for i,line in enumerate(json_file):
+                labels.append(json.loads(line)["label"])
+        self.img_label=labels
+        self.num_instances=len(self.img_paths )
+        self.transform=transforms.Compose([transforms.RandomResizedCrop(224),
+                                     transforms.RandomHorizontalFlip(),
+                                     transforms.ToTensor(),
+                                     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
+    
+    def __len__(self):
+        return int(self.num_instances)
+    
+    def __getitem__(self, index):
+        img = Image.open(self.img_paths[index])
+        # RGB为彩色图片，L为灰度图片
+        if img.mode != 'RGB':
+            raise ValueError("image: {} isn't RGB mode.".format(self.img_paths[index]))
+        label = self.img_label[index]
+
+        if self.transform is not None:
+            image = self.transform(img)
+        
         return image,label
 
 """Save and load model"""
@@ -119,6 +155,7 @@ def save_ckpt(save_path,model_name,model,epoch_index,scheduler,optimizer):
                         '%s%s' % (save_path,model_name))
     print("->Saving model {} at {}".format(save_path+model_name, 
                 datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    
 """Device"""
 def get_gpus(num=None):
     gpu_nums = torch.cuda.device_count()

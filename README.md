@@ -7,6 +7,8 @@
 * 包含基础模块例如DSC、SelfAttention、TransformerEncoder、CBAM、SE;
 * 加入save/loadcheckpoint已保存模型及当前训练状态，实现训练中断后也可恢复之前训练状态;
 * 加入多进程训练,训练使用卡1,验证使用卡2。
+* 增加ModelLib包含EfficientNet/ShuffleNet/Mobilenet/GhostNet/ShuffleNet
+* 增加无需缓存数据预处理函数,适用于大批量图像数据情况,训练时get 1batch数据处理1batch数据
 
 ## 环境搭建
 * bash env_setup.sh
