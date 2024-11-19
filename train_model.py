@@ -46,7 +46,13 @@ def CreateDataloader(image_path,label_path,cached_file):
         loader = DataLoader(dataset=dataset, batch_size=BATCH_SIZE, shuffle=True)
     else:
         dataset = OnlineCacheDataset(image_path,label_path,shuffle=True)
-        loader = DataLoader(dataset=dataset, batch_size=BATCH_SIZE, shuffle=True)
+        num_work = min([os.cpu_count(), BATCH_SIZE if BATCH_SIZE > 1 else 0, 8])  # number of workers
+        loader = DataLoader(dataset=dataset, 
+                            batch_size=BATCH_SIZE, 
+                            shuffle=True,
+                            pin_memory=True,
+                            num_workers=num_work,
+                            collate_fn=dataset.collate_fn)
     return loader
 
 def main():

@@ -114,34 +114,48 @@ class CacheDataset(Dataset):
         label=feature["label"]
         return image,label
     
-class OnlineCacheDataset(Dataset):
-    def __init__(self,image_path,label_path,shuffle=False):
-        labels=[]
-        self.img_paths = sorted([os.path.join(image_path, file) for file in os.listdir(image_path) if file.lower().endswith('.jpg')])
-        with open(label_path,'r') as json_file:
-             for i,line in enumerate(json_file):
-                labels.append(json.loads(line)["label"])
-        self.img_label=labels
-        self.num_instances=len(self.img_paths )
-        self.transform=transforms.Compose([transforms.RandomResizedCrop(224),
-                                     transforms.RandomHorizontalFlip(),
-                                     transforms.ToTensor(),
-                                     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
-    
+class OnlineCacheDataset(Dataset):   #only when json is standard json form,it will speed up
+    def __init__(self, root_dir: str, label_path: str, transform=None):
+        images_dir = root_dir
+        self.label_dict=[]
+        assert os.path.exists(images_dir), f"Image directory '{images_dir}' not found."
+        assert os.path.exists(label_path), f"Label file '{label_path}' not found."
+        with open(label_path, "r") as json_file:
+            self.label_dict=json.load(json_file)  # 存储每一行的 JSON 数据
+
+        # 从 label_dict 中提取数据（假设 JSON 文件格式包含 "filename" 和 "label" 字段）
+        self.img_paths = [os.path.join(images_dir, item['file']) for item in self.label_dict]
+        self.img_labels = [value["label"] for value in self.label_dict]
+        self.total_num = len(self.img_paths)
+        self.labels = set(self.img_labels)
+        self.transform = transform or transforms.Compose([
+            transforms.RandomResizedCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ])
+
     def __len__(self):
-        return int(self.num_instances)
-    
-    def __getitem__(self, index):
-        img = Image.open(self.img_paths[index])
+        return self.total_num
+
+    def __getitem__(self, item):
+        img = Image.open(self.img_paths[item])
         # RGB为彩色图片，L为灰度图片
         if img.mode != 'RGB':
-            raise ValueError("image: {} isn't RGB mode.".format(self.img_paths[index]))
-        label = self.img_label[index]
+            raise ValueError("image: {} isn't RGB mode.".format(self.img_paths[item]))
+        label = self.img_labels[item]
 
         if self.transform is not None:
-            image = self.transform(img)
-        
-        return image,label
+            img = self.transform(img)
+
+        return img, label
+
+    @staticmethod
+    def collate_fn(batch):
+        images, labels = tuple(zip(*batch))
+        images = torch.stack(images, dim=0)  # 将图像堆叠成一个张量
+        labels = torch.as_tensor(labels)    # 转换标签为张量
+        return images, labels
 
 """Save and load model"""
 from datetime import datetime
