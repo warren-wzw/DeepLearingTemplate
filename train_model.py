@@ -60,6 +60,7 @@ def main():
     """Define Model"""
     model=TEMPLATE()
     model.to(DEVICE)
+    model_name=model.__class__.__name__
     PrintModelInfo(model)
     """Pretrain"""
     if Pretrain:
@@ -124,9 +125,9 @@ def main():
         """save model"""
         if loss_sum/(step+1) < best_loss:
             best_loss = loss_sum/(step+1)
-            save_ckpt(SAVE_PATH,MODEL_NAME,model,epoch_index,scheduler,optimizer)
+            save_ckpt(SAVE_PATH,model_name+'.ckpt',model,epoch_index,scheduler,optimizer)
         else:
-            save_ckpt(SAVE_PATH,LAST_MODEL_NAME,model,epoch_index,scheduler,optimizer) 
+            save_ckpt(SAVE_PATH,model_name+'_last.ckpt',model,epoch_index,scheduler,optimizer) 
     end_time=datetime.now()
     print("Training consume :",(end_time-start_time)/60,"minutes")
     

@@ -9,6 +9,7 @@ import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
 
 from PIL import Image
+from datetime import datetime
 from torch.utils.data import  Dataset
 from torch.optim.lr_scheduler import LambdaLR
 
@@ -22,6 +23,12 @@ def PrintModelInfo(model):
         print(f"{name}: {num_params:.4f} MB, Shape: {param.shape}")
         total_params += num_params
     print(f"Traing parments {model_parments/1e6}M,Model Size: {total_params:.4f} MB")     
+'''Log'''
+def RecordLog(logfilename,message):
+    """input:message=f"MODEL NAME:{model_name},EPOCH:{},Traing-Loss:{.3f},Acc:{(:.3f} %,Val-Acc:{:.3f} %" """
+    with open(logfilename, 'a', encoding='utf-8') as logfile:
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        logfile.write(f"[{timestamp}] {message}\n")
 
 """Lr"""
 def get_linear_schedule_with_warmup(optimizer, num_warmup_steps, num_training_steps, last_epoch=-1):
