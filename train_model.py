@@ -4,7 +4,7 @@ import torch
 import tqdm 
 import torch.nn as nn
 os.chdir(sys.path[0])
-os.environ["CUDA_VISIBLE_DEVICES"]='0'
+os.environ["CUDA_VISIBLE_DEVICES"]='0' #'0,1'GPU NUM
 from model.template import TEMPLATE
 from torch.utils.data import (DataLoader)
 from datetime import datetime
@@ -58,7 +58,7 @@ def CreateDataloader(image_path,label_path,cached_file):
 def main():
     global_step=0
     """Define Model"""
-    model=TEMPLATE()
+    model=nn.DataParallel(TEMPLATE()) 
     model.to(DEVICE)
     model_name=model.__class__.__name__
     PrintModelInfo(model)
