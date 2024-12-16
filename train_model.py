@@ -65,7 +65,11 @@ def main():
     PrintModelInfo(model)
     """Pretrain"""
     if Pretrain:
-        model.load_state_dict(torch.load(PRETRAINED_MODEL_PATH),strict=False)
+        ckpt = torch.load(PRETRAINED_MODEL_PATH)
+        if "state_dict" in ckpt:
+            model.load_state_dict(ckpt["state_dict"],strict=False)
+        else:
+            model.model.load_state_dict(ckpt,strict=False)
     """Create dataloader"""
     dataloader_train=CreateDataloader(data_path_train,cached_file)
     dataloader_val=CreateDataloader(data_path_val,cached_file_val)
