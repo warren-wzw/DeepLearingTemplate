@@ -6,7 +6,7 @@ os.chdir(sys.path[0])
 os.environ["CUDA_VISIBLE_DEVICES"]='1'
 import torch
 
-from model.template import TEMPLATE
+from model.model import TEMPLATE
 from model.utils import load_and_cache_withlabel,PrintModelInfo,CaculateAcc, load_checkpoint
 DEVICE=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 MODEL_PATH="./output/output_model/.ckpt"

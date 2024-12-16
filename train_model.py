@@ -5,11 +5,12 @@ import tqdm
 import torch.nn as nn
 os.chdir(sys.path[0])
 os.environ["CUDA_VISIBLE_DEVICES"]='0' #'0,1'GPU NUM
-from model.template import TEMPLATE
+from model.model import TEMPLATE
 from torch.utils.data import (DataLoader)
 from datetime import datetime
-from model.utils import CacheDataset,OnlineCacheDataset,PreprocessCacheData,get_linear_schedule_with_warmup,\
-    PrintModelInfo,CaculateAcc,save_ckpt
+
+from model.dataset import  CacheDataset,OnlineCacheDataset,PreprocessCacheData
+from model.utils import get_linear_schedule_with_warmup,PrintModelInfo,save_ckpt
 try:
     from torch.utils.tensorboard import SummaryWriter
 except:
@@ -95,7 +96,7 @@ def main():
             image,label= image.to(DEVICE),label.to(DEVICE)
             optimizer.zero_grad()
             output=model(image)
-            accuarcy=CaculateAcc()
+            #accuarcy=CaculateAcc()
             loss = criterion(output, label)
             loss.backward()
             optimizer.step()
