@@ -1,1 +1,63 @@
-<h1>Hello GitHub Pages!</h1>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>深度学习项目工程模版</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2 {
+            color: #333;
+        }
+        ul {
+            list-style-type: disc;
+            margin-left: 20px;
+        }
+        a {
+            color: #007BFF;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>项目介绍</h1>
+        <p>深度学习项目工程模版</p>
+
+        <h2>有哪些功能?</h2>
+        <ul>
+            <li>快速建立深度学习项目;</li>
+            <li>多GPU并行训练;</li>
+            <li>加入多进程训练, 训练使用卡1, 验证使用卡2。</li>
+            <li>包含一些基础功能例如，学习率预热衰减、打印模型结构及参数信息、加载缓存数据等;</li>
+            <li>包含基础模块例如DSC、SelfAttention、TransformerEncoder、CBAM、SE;</li>
+            <li>加入save/loadcheckpoint已保存模型及当前训练状态，实现训练中断后也可恢复之前训练状态;</li>
+            <li>增加ModelLib包含EfficientNet/ShuffleNet/Mobilenet/GhostNet/ShuffleNet</li>
+            <li>增加无需缓存数据预处理函数, 适用于大批量图像数据情况, 训练时get 1batch数据处理1batch数据</li>
+        </ul>
+
+        <h2>环境搭建</h2>
+        <ul>
+            <li><code>bash env_setup.sh</code></li>
+        </ul>
+
+        <h2>关于作者</h2>
+        <ul>
+            <li><a href="https://blog.csdn.net/warren@伟">个人博客: CSDN-warren@伟</a></li>
+        </ul>
+    </div>
+</body>
+</html>
